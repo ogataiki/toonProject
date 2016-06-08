@@ -173,6 +173,8 @@
 		5A91DDE91D0560930074FCB8 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftMigration = 0730;
+				LastSwiftUpdateCheck = 0730;
 				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = ogataiki;
 				TargetAttributes = {
@@ -454,6 +456,7 @@
 				5A91DE121D0560930074FCB8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		5A91DE131D0560930074FCB8 /* Build configuration list for PBXNativeTarget "toonProjectTests" */ = {
 			isa = XCConfigurationList;
@@ -462,6 +465,7 @@
 				5A91DE151D0560930074FCB8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
