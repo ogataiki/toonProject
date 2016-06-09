@@ -18,7 +18,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="OjW-Ey-Mcd">
-                                <rect key="frame" x="0.0" y="20" width="600" height="450"/>
+                                <rect key="frame" x="0.0" y="20" width="600" height="408"/>
                             </imageView>
                             <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="wm7-zq-GNb">
                                 <rect key="frame" x="0.0" y="556" width="600" height="44"/>
@@ -55,7 +55,6 @@
                                     <constraint firstAttribute="width" constant="66" id="hkA-KJ-qm5"/>
                                 </constraints>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="m0C-OU-ibX" userLabel="edgeSwitch">
@@ -68,7 +67,7 @@
                                     <action selector="edgeChange:" destination="BYZ-38-t0r" eventType="valueChanged" id="YhM-Zt-z1l"/>
                                 </connections>
                             </switch>
-                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="32" minValue="0.0" maxValue="255" translatesAutoresizingMaskIntoConstraints="NO" id="iEJ-m2-fbD" userLabel="edgeSlider">
+                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="32" minValue="0.0" maxValue="255" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="iEJ-m2-fbD" userLabel="edgeSlider">
                                 <rect key="frame" x="161" y="521" width="425" height="31"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="30" id="B7H-Ns-10l"/>
@@ -78,41 +77,86 @@
                                 </connections>
                             </slider>
                             <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="saF-od-MBY">
-                                <rect key="frame" x="220" y="478" width="161" height="29"/>
+                                <rect key="frame" x="163" y="478" width="421" height="29"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="28" id="3YW-od-ASE"/>
+                                    <constraint firstAttribute="width" constant="304" id="IjK-oF-ldZ"/>
+                                    <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="28" id="ezK-AO-qyI"/>
+                                    <constraint firstAttribute="height" constant="28" id="uSU-JS-9kG"/>
                                 </constraints>
                                 <segments>
                                     <segment title="暗め"/>
                                     <segment title="普通"/>
                                     <segment title="明るめ"/>
                                 </segments>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="IjK-oF-ldZ"/>
+                                    </mask>
+                                </variation>
                                 <connections>
                                     <action selector="levelChange:" destination="BYZ-38-t0r" eventType="valueChanged" id="obi-ZF-Gy2"/>
                                 </connections>
                             </segmentedControl>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="滑らかさ" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="asK-qG-jVC">
+                                <rect key="frame" x="16" y="440" width="135" height="21"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="135" id="2qT-w4-Sgs"/>
+                                    <constraint firstAttribute="height" constant="21" id="pJw-cm-iGa"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="0.0" maxValue="3" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="yl5-LC-ab8" userLabel="detailSlider">
+                                <rect key="frame" x="161" y="436" width="425" height="31"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="30" id="SjQ-Kg-Q9d"/>
+                                </constraints>
+                                <connections>
+                                    <action selector="detailValueChange:" destination="BYZ-38-t0r" eventType="valueChanged" id="imG-6e-zWX"/>
+                                </connections>
+                            </slider>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="明るさ" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="mrp-MW-rpo">
+                                <rect key="frame" x="16" y="481" width="135" height="21"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="135" id="7Sf-bI-Szk"/>
+                                    <constraint firstAttribute="height" constant="21" id="TZv-ag-mxb"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
+                            <constraint firstItem="yl5-LC-ab8" firstAttribute="leading" secondItem="asK-qG-jVC" secondAttribute="trailing" constant="12" id="2lP-5P-g7L"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="top" secondItem="iEJ-m2-fbD" secondAttribute="bottom" constant="5" id="3Mz-fv-aTT"/>
+                            <constraint firstItem="saF-od-MBY" firstAttribute="leading" secondItem="mrp-MW-rpo" secondAttribute="trailing" constant="12" id="3di-Tf-m4M"/>
+                            <constraint firstItem="xZl-s2-qTY" firstAttribute="top" secondItem="mrp-MW-rpo" secondAttribute="bottom" constant="13" id="6Pr-zK-lSr"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="top" secondItem="xZl-s2-qTY" secondAttribute="bottom" id="76k-aH-jlF"/>
+                            <constraint firstAttribute="trailing" secondItem="saF-od-MBY" secondAttribute="trailing" constant="16" id="BfM-1D-u8O"/>
+                            <constraint firstItem="yl5-LC-ab8" firstAttribute="centerY" secondItem="asK-qG-jVC" secondAttribute="centerY" id="D5v-1m-Dq8"/>
                             <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="wm7-zq-GNb" secondAttribute="bottom" id="EL4-4v-OhR"/>
                             <constraint firstAttribute="trailing" secondItem="wm7-zq-GNb" secondAttribute="trailing" id="K3z-Ht-EKf"/>
                             <constraint firstItem="m0C-OU-ibX" firstAttribute="leading" secondItem="xZl-s2-qTY" secondAttribute="trailing" constant="8" id="Ku4-GN-bx9"/>
+                            <constraint firstItem="asK-qG-jVC" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" constant="16" id="LWg-fn-WdP"/>
+                            <constraint firstItem="yl5-LC-ab8" firstAttribute="top" secondItem="OjW-Ey-Mcd" secondAttribute="bottom" constant="8" id="Ohq-pZ-aWA"/>
                             <constraint firstAttribute="trailing" secondItem="iEJ-m2-fbD" secondAttribute="trailing" constant="16" id="SB7-oF-Zn2"/>
                             <constraint firstItem="xZl-s2-qTY" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" constant="16" id="cOK-ET-lMR"/>
                             <constraint firstItem="OjW-Ey-Mcd" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="cyd-VG-Ymb"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="top" secondItem="m0C-OU-ibX" secondAttribute="bottom" constant="5" id="faq-qt-Au5"/>
-                            <constraint firstItem="saF-od-MBY" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="j6u-Wq-0mH"/>
+                            <constraint firstItem="mrp-MW-rpo" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" constant="16" id="jCf-FU-WzD"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="loW-Iu-21u"/>
                             <constraint firstItem="iEJ-m2-fbD" firstAttribute="leading" secondItem="m0C-OU-ibX" secondAttribute="trailing" constant="24" id="oa2-pZ-6ZD"/>
-                            <constraint firstItem="saF-od-MBY" firstAttribute="top" secondItem="OjW-Ey-Mcd" secondAttribute="bottom" constant="8" id="sQF-zT-g8n"/>
+                            <constraint firstItem="saF-od-MBY" firstAttribute="top" secondItem="yl5-LC-ab8" secondAttribute="bottom" constant="12" id="q58-PL-ea5"/>
+                            <constraint firstAttribute="trailing" secondItem="yl5-LC-ab8" secondAttribute="trailing" constant="16" id="sks-0J-tdD"/>
                             <constraint firstAttribute="trailing" secondItem="OjW-Ey-Mcd" secondAttribute="trailing" id="tYJ-cw-3aL"/>
-                            <constraint firstItem="iEJ-m2-fbD" firstAttribute="top" secondItem="saF-od-MBY" secondAttribute="bottom" constant="15" id="vsR-YJ-Clh"/>
                             <constraint firstItem="OjW-Ey-Mcd" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="yzK-oV-HjT"/>
+                            <constraint firstItem="mrp-MW-rpo" firstAttribute="top" secondItem="asK-qG-jVC" secondAttribute="bottom" constant="20" id="zl8-Pc-3p3"/>
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="detailSlider" destination="yl5-LC-ab8" id="09B-kn-ZZl"/>
                         <outlet property="edgeSlider" destination="iEJ-m2-fbD" id="kJH-v5-wJC"/>
                         <outlet property="edgeSwitch" destination="m0C-OU-ibX" id="7XK-3Y-Xh7"/>
                         <outlet property="imageSelectSeg" destination="qSM-YX-GA7" id="lFW-T7-MCS"/>

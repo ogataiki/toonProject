@@ -5,6 +5,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
 
     @IBOutlet weak var imageView: UIImageView!
     
+    @IBOutlet weak var detailSlider: UISlider!
+    
     @IBOutlet weak var edgeSwitch: UISwitch!
     @IBOutlet weak var edgeSlider: UISlider!
     
@@ -16,6 +18,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
 
     
     let shaderFilter = GPUImageFilter(fragmentShaderFromFile: "toon");
+    let gaussianFilter = GPUImageGaussianBlurFilter();
+
     var sourceImage: UIImage? = nil;
     var filteredImage: UIImage? = nil;
     var isEdge = false;
@@ -40,6 +44,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+    
+    func menuEnabled(value: Bool) {
+        detailSlider.enabled = value;
+        edgeSwitch.enabled = value;
+        edgeSlider.enabled = value;
+        levelSegmented.enabled = value;
+        imageSelectSeg.enabled = value;
+
+    }
 
     @IBAction func cameraAction(sender: UIBarButtonItem) {
         
@@ -52,9 +65,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             , preferredStyle:  UIAlertControllerStyle.ActionSheet);
         
         // Defaultボタン
-        let cameraAction: UIAlertAction = UIAlertAction(title: "カメラで撮影", style: UIAlertActionStyle.Default, handler:{
+        let cameraAction: UIAlertAction = UIAlertAction(title: "カメラで写真撮影", style: UIAlertActionStyle.Default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickImageFromCamera();
+        })
+        let movieAction: UIAlertAction = UIAlertAction(title: "カメラで動画撮影", style: UIAlertActionStyle.Default, handler:{
+            (action: UIAlertAction) -> Void in
+            self.pickMovieFromCamera();
         })
         let libraryAction: UIAlertAction = UIAlertAction(title: "写真を選択", style: UIAlertActionStyle.Default, handler:{
             (action: UIAlertAction) -> Void in
@@ -68,43 +85,31 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         alert.addAction(cancelAction);
         alert.addAction(cameraAction);
+        alert.addAction(movieAction);
         alert.addAction(libraryAction);
         
         presentViewController(alert, animated: true, completion: nil)
     }
-
-    @IBAction func edgeChange(sender: UISwitch) {
-
-        if activityIndicatorView.isAnimating() {
-            return;
-        }
-
+    
+    
+    
+    @IBAction func detailValueChange(sender: AnyObject) {
         execToonFilter();
     }
-    @IBAction func edgeValueChange(sender: UISlider) {
-        
-        if activityIndicatorView.isAnimating() {
-            return;
-        }
 
+    @IBAction func edgeChange(sender: UISwitch) {
+        execToonFilter();
+    }
+    
+    @IBAction func edgeValueChange(sender: UISlider) {
         execToonFilter();
     }
     
     @IBAction func levelChange(sender: UISegmentedControl) {
-        
-        if activityIndicatorView.isAnimating() {
-            return;
-        }
-
         execToonFilter();
     }
     
     @IBAction func imageSourceChange(sender: UISegmentedControl) {
-        
-        if activityIndicatorView.isAnimating() {
-            return;
-        }
-        
         if(sender.selectedSegmentIndex == 0) {
             if let source = sourceImage {
                 self.imageView.image = source;
@@ -119,49 +124,52 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     func execToonFilter() {
         
-        // アニメーションを開始
+        menuEnabled(false);
         activityIndicatorView.startAnimating()
         NSRunLoop.currentRunLoop().runUntilDate(NSDate(timeIntervalSinceNow: 0.0));
         
-        let qualityOfServiceClass = DISPATCH_QUEUE_PRIORITY_DEFAULT;
-        let backgroundQueue = dispatch_get_global_queue(qualityOfServiceClass, 0);
-        dispatch_async(backgroundQueue, {
-            // Backgroundで行いたい重い処理はここ
-            // フィルタかける
-            if let image = self.sourceImage {
-                
-                self.shaderFilter.setFloat(GLfloat(image.size.width), forUniformName: "imageWidth");
-                self.shaderFilter.setFloat(GLfloat(image.size.height), forUniformName: "imageHeight");
-                self.shaderFilter.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
-                self.shaderFilter.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
-                self.shaderFilter.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
-                if let out = self.shaderFilter.imageByFilteringImage(image) {
-                    let gaussianFilter = GPUImageGaussianBlurFilter();
-                    if let o = gaussianFilter.imageByFilteringImage(out) {
-                        self.filteredImage = o;
-                        self.imageSelectSeg.selectedSegmentIndex = 1;
-                        
-                        dispatch_async(dispatch_get_main_queue(), {
-                            // 処理が終わった後UIスレッドでやりたいことはここ
-                            self.imageView.image = o;
-                            self.activityIndicatorView.stopAnimating();
-                        })
-                        return;
-                    }
+        // バックグラウンドで処理すると途中で処理がおかしくなってへんな画像が生成されることがある。
+        // フィルタかける
+        if let origImage = self.sourceImage {
+            
+            // 撮影時の向き反映
+            var image = origImage;
+            
+            // 処理速度向上のためサイズを縮小 & 撮影時の向きを反映
+            let baseWidth: CGFloat = 1600;
+            let ratio: CGFloat = baseWidth / image.size.width;
+            let newSize = CGSize(width: (image.size.width * ratio), height: (image.size.height * ratio));
+            UIGraphicsBeginImageContext(newSize);
+            image.drawInRect(CGRectMake(0, 0, newSize.width, newSize.height));
+            image = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            self.shaderFilter.setFloat(GLfloat(image.size.width), forUniformName: "imageWidth");
+            self.shaderFilter.setFloat(GLfloat(image.size.height), forUniformName: "imageHeight");
+            self.shaderFilter.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
+            self.shaderFilter.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
+            self.shaderFilter.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
+            
+            gaussianFilter.blurRadiusInPixels = CGFloat(detailSlider.value);
+            if let out = gaussianFilter.imageByFilteringImage(image) {
+                if let o = self.shaderFilter.imageByFilteringImage(out) {
+                    self.filteredImage = o;
+                    self.imageSelectSeg.selectedSegmentIndex = 1;
+                    
+                    self.imageView.image = o;
+                    
+                    self.activityIndicatorView.stopAnimating();
+                    self.menuEnabled(true);
+                    return;
                 }
-                
-                self.filteredImage = nil;
-                dispatch_async(dispatch_get_main_queue(), {
-                    // 処理が終わった後UIスレッドでやりたいことはここ
-                    self.imageView.image = image;
-                })
             }
-
-            dispatch_async(dispatch_get_main_queue(), {
-                // 処理が終わった後UIスレッドでやりたいことはここ
-                self.activityIndicatorView.stopAnimating();
-            })
-        })
+            
+            self.filteredImage = nil;
+            self.imageView.image = image;
+        }
+        
+        self.activityIndicatorView.stopAnimating();
+        self.menuEnabled(true);
     }
     
     // 写真を撮ってそれを選択
@@ -173,7 +181,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             self.presentViewController(controller, animated: true, completion: nil);
         }
     }
-    
+
+    func pickMovieFromCamera() {
+    }
+
     // ライブラリから写真を選択する
     func pickImageFromLibrary() {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.PhotoLibrary) {
