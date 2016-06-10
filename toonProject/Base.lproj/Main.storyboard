@@ -34,7 +34,7 @@
                                     <barButtonItem style="plain" systemItem="flexibleSpace" id="Hh3-cf-QAM"/>
                                     <barButtonItem style="plain" id="tQK-EQ-oDY">
                                         <segmentedControl key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="bar" selectedSegmentIndex="0" id="qSM-YX-GA7">
-                                            <rect key="frame" x="190" y="7" width="220" height="30"/>
+                                            <rect key="frame" x="210" y="7" width="180" height="30"/>
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                             <segments>
                                                 <segment title="元の画像"/>
@@ -46,6 +46,11 @@
                                         </segmentedControl>
                                     </barButtonItem>
                                     <barButtonItem style="plain" systemItem="flexibleSpace" id="A3o-g8-zWy"/>
+                                    <barButtonItem systemItem="save" id="acc-Mh-OrG">
+                                        <connections>
+                                            <action selector="saveAction:" destination="BYZ-38-t0r" id="4zy-eX-lEm"/>
+                                        </connections>
+                                    </barButtonItem>
                                 </items>
                             </toolbar>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="縁取り" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="xZl-s2-qTY">
@@ -67,7 +72,7 @@
                                     <action selector="edgeChange:" destination="BYZ-38-t0r" eventType="valueChanged" id="YhM-Zt-z1l"/>
                                 </connections>
                             </switch>
-                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="32" minValue="0.0" maxValue="255" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="iEJ-m2-fbD" userLabel="edgeSlider">
+                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="214" minValue="0.0" maxValue="254" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="iEJ-m2-fbD" userLabel="edgeSlider">
                                 <rect key="frame" x="161" y="521" width="425" height="31"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="30" id="B7H-Ns-10l"/>
@@ -107,7 +112,7 @@
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="0.0" maxValue="3" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="yl5-LC-ab8" userLabel="detailSlider">
+                            <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="3" minValue="0.0" maxValue="5" continuous="NO" translatesAutoresizingMaskIntoConstraints="NO" id="yl5-LC-ab8" userLabel="detailSlider">
                                 <rect key="frame" x="161" y="436" width="425" height="31"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="30" id="SjQ-Kg-Q9d"/>
@@ -162,6 +167,7 @@
                         <outlet property="imageSelectSeg" destination="qSM-YX-GA7" id="lFW-T7-MCS"/>
                         <outlet property="imageView" destination="OjW-Ey-Mcd" id="Wgj-kp-qEw"/>
                         <outlet property="levelSegmented" destination="saF-od-MBY" id="D4h-he-dhB"/>
+                        <outlet property="saveButton" destination="acc-Mh-OrG" id="eJT-FJ-Jtn"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

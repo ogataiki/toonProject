@@ -14,6 +14,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBOutlet weak var imageSelectSeg: UISegmentedControl!
     
+    @IBOutlet weak var saveButton: UIBarButtonItem!
+    
     let activityIndicatorView = UIActivityIndicatorView();
 
     
@@ -51,7 +53,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         edgeSlider.enabled = value;
         levelSegmented.enabled = value;
         imageSelectSeg.enabled = value;
-
+        saveButton.enabled = value;
     }
 
     @IBAction func cameraAction(sender: UIBarButtonItem) {
@@ -119,6 +121,29 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             if let out = self.filteredImage {
                 self.imageView.image = out;
             }            
+        }
+    }
+    
+    @IBAction func saveAction(sender: UIBarButtonItem) {
+        if let i = self.filteredImage {
+            UIImageWriteToSavedPhotosAlbum(i, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil);
+        }
+    }
+    func image(image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutablePointer<Void>) {
+        if error != nil {
+            //プライバシー設定不許可など書き込み失敗時は -3310 (ALAssetsLibraryDataUnavailableError)
+            print(error.code)
+        }
+        else {
+            let alert: UIAlertController = UIAlertController(title: "画像を保存しました"
+                , message: nil
+                , preferredStyle:  UIAlertControllerStyle.Alert);
+            // Defaultボタン
+            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler:{
+                (action: UIAlertAction) -> Void in
+            })
+            alert.addAction(okAction);
+            presentViewController(alert, animated: true, completion: nil)
         }
     }
     

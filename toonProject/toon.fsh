@@ -93,8 +93,8 @@ void main() {
         if(br < 0.0 * unit) { ret_br = 0.0 * unit; }
         else if(br < 48.0 * unit) { ret_br = 0.0 * unit; }
         else if(br < 92.0 * unit) { ret_br = 64.0 * unit; }
-        else if(br < 192.0 * unit) { ret_br = 192.0 * unit; }
-        else if(br < 236.0 * unit) { ret_br = 236.0 * unit; }
+        else if(br < 182.0 * unit) { ret_br = 182.0 * unit; }
+        else if(br < 226.0 * unit) { ret_br = 226.0 * unit; }
         else if(br < 256.0 * unit) { ret_br = 255.0 * unit; }
     }
 
