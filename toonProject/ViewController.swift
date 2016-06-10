@@ -22,19 +22,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     let activityIndicatorView = UIActivityIndicatorView();
 
-    
     let shaderFilter = GPUImageFilter(fragmentShaderFromFile: "toon");
     let gaussianFilter = GPUImageGaussianBlurFilter();
 
     var sourceImage: UIImage? = nil;
     var filteredImage: UIImage? = nil;
     var isEdge = false;
-    
-    
-    // 動画準備
-    var movieWriter: GPUImageMovieWriter!;    //書き込み用
-    var movieFile: GPUImageMovie!;            //読み込み用
-    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -208,24 +201,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             image = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
             
-            self.shaderFilter.setFloat(GLfloat(image.size.width), forUniformName: "imageWidth");
-            self.shaderFilter.setFloat(GLfloat(image.size.height), forUniformName: "imageHeight");
-            self.shaderFilter.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
-            self.shaderFilter.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
-            self.shaderFilter.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
-            
-            gaussianFilter.blurRadiusInPixels = CGFloat(detailSlider.value);
-            if let out = gaussianFilter.imageByFilteringImage(image) {
-                if let o = self.shaderFilter.imageByFilteringImage(out) {
-                    self.filteredImage = o;
-                    self.imageSelectSeg.selectedSegmentIndex = 1;
-                    
-                    self.imageView.image = o;
-                    
-                    self.activityIndicatorView.stopAnimating();
-                    self.menuEnabled(true);
-                    return;
-                }
+            if let out = toonFilter(image.size).imageByFilteringImage(image) {
+                self.filteredImage = out;
+                self.imageSelectSeg.selectedSegmentIndex = 1;
+                
+                self.imageView.image = out;
+                
+                self.activityIndicatorView.stopAnimating();
+                self.menuEnabled(true);
+                return;
             }
             
             self.filteredImage = nil;
@@ -246,28 +230,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let gpuImageView = GPUImageView(frame: self.imageView.frame);
         self.view.addSubview(gpuImageView);
         
-        self.shaderFilter.setFloat(GLfloat(gpuImageView.frame.size.width), forUniformName: "imageWidth");
-        self.shaderFilter.setFloat(GLfloat(gpuImageView.frame.size.height), forUniformName: "imageHeight");
-        self.shaderFilter.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
-        self.shaderFilter.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
-        self.shaderFilter.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
-        
-        gaussianFilter.blurRadiusInPixels = CGFloat(detailSlider.value);
-
-        let group = GPUImageFilterGroup();
-        group.addFilter(self.gaussianFilter);
-        group.addFilter(self.shaderFilter);
-        group.initialFilters = [self.gaussianFilter];
-        group.terminalFilter = self.shaderFilter;
-        self.gaussianFilter.addTarget(self.shaderFilter);
-        
-        group.forceProcessingAtSize(gpuImageView.sizeInPixels);
+        let group = toonFilterGpuImageView(gpuImageView);
         
         let movieFile = GPUImageMovie(URL: url);
         movieFile.playAtActualSpeed = true;
-        movieFile.addTarget(group);
-        
-        group.addTarget(gpuImageView);
         movieFile.addTarget(group);
         movieFile.startProcessing();
 
@@ -309,6 +275,39 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.activityIndicatorView.stopAnimating();
         self.menuEnabled(true);
     }
+    
+    func toonFilter(size: CGSize) -> GPUImageFilterGroup {
+        
+        let gaussian = GPUImageGaussianBlurFilter();
+        gaussian.blurRadiusInPixels = CGFloat(detailSlider.value);
+
+        let toonShader = GPUImageFilter(fragmentShaderFromFile: "toon");
+        toonShader.setFloat(GLfloat(size.width), forUniformName: "imageWidth");
+        toonShader.setFloat(GLfloat(size.height), forUniformName: "imageHeight");
+        toonShader.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
+        toonShader.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
+        toonShader.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
+        
+        let group = GPUImageFilterGroup();
+        group.addFilter(gaussian);
+        group.addFilter(toonShader);
+        group.initialFilters = [gaussian];
+        group.terminalFilter = toonShader;
+        gaussian.addTarget(toonShader);
+        
+        group.forceProcessingAtSize(size);
+
+        return group;
+    }
+    
+    func toonFilterGpuImageView(gpuimageview: GPUImageView) -> GPUImageFilterGroup {
+        
+        let group = toonFilter(gpuimageview.frame.size);
+        group.addTarget(gpuimageview);
+
+        return group;
+    }
+
 
     
     // 写真を撮ってそれを選択
