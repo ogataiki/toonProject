@@ -1,10 +1,13 @@
 import UIKit
 import GPUImage
+import MobileCoreServices
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIScrollViewDelegate {
 
     @IBOutlet weak var imageScrollView: UIScrollView!
     @IBOutlet weak var imageView: UIImageView!
+    
+    @IBOutlet weak var toolView: UIView!
     
     @IBOutlet weak var detailSlider: UISlider!
     
@@ -27,9 +30,17 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     var filteredImage: UIImage? = nil;
     var isEdge = false;
     
+    
+    // 動画準備
+    var movieWriter: GPUImageMovieWriter!;    //書き込み用
+    var movieFile: GPUImageMovie!;            //読み込み用
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        
+        toolView.backgroundColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.8);
         
         imageScrollView.delegate = self;
         if let size = imageView.image?.size {
@@ -95,6 +106,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             (action: UIAlertAction) -> Void in
             self.pickImageFromLibrary();
         })
+        let libraryMovieAction: UIAlertAction = UIAlertAction(title: "動画を選択", style: UIAlertActionStyle.Default, handler:{
+            (action: UIAlertAction) -> Void in
+            self.pickMovieFromLibrary();
+        })
         
         // Cancelボタン
         let cancelAction: UIAlertAction = UIAlertAction(title: "cancel", style: UIAlertActionStyle.Cancel, handler:{
@@ -105,6 +120,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         alert.addAction(cameraAction);
         alert.addAction(movieAction);
         alert.addAction(libraryAction);
+        alert.addAction(libraryMovieAction);
         
         presentViewController(alert, animated: true, completion: nil)
     }
@@ -220,6 +236,81 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.menuEnabled(true);
     }
     
+    func execToonFilterMovie(url: NSURL) {
+        
+        menuEnabled(false);
+        activityIndicatorView.startAnimating()
+        NSRunLoop.currentRunLoop().runUntilDate(NSDate(timeIntervalSinceNow: 0.0));
+        
+        //表示するためのviewを用意
+        let gpuImageView = GPUImageView(frame: self.imageView.frame);
+        self.view.addSubview(gpuImageView);
+        
+        self.shaderFilter.setFloat(GLfloat(gpuImageView.frame.size.width), forUniformName: "imageWidth");
+        self.shaderFilter.setFloat(GLfloat(gpuImageView.frame.size.height), forUniformName: "imageHeight");
+        self.shaderFilter.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
+        self.shaderFilter.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
+        self.shaderFilter.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
+        
+        gaussianFilter.blurRadiusInPixels = CGFloat(detailSlider.value);
+
+        let group = GPUImageFilterGroup();
+        group.addFilter(self.gaussianFilter);
+        group.addFilter(self.shaderFilter);
+        group.initialFilters = [self.gaussianFilter];
+        group.terminalFilter = self.shaderFilter;
+        self.gaussianFilter.addTarget(self.shaderFilter);
+        
+        group.forceProcessingAtSize(gpuImageView.sizeInPixels);
+        
+        let movieFile = GPUImageMovie(URL: url);
+        movieFile.playAtActualSpeed = true;
+        movieFile.addTarget(group);
+        
+        group.addTarget(gpuImageView);
+        movieFile.addTarget(group);
+        movieFile.startProcessing();
+
+        /*
+        let asset = AVURLAsset(URL: url);
+        let videoTracks = asset.tracksWithMediaType(AVMediaTypeVideo);
+        let videoTrack = videoTracks[0];
+        var exportUrl: NSURL?;
+        if let dir : NSString = NSSearchPathForDirectoriesInDomains( NSSearchPathDirectory.DocumentDirectory, NSSearchPathDomainMask.AllDomainsMask, true ).first {
+            exportUrl = NSURL(fileURLWithPath: dir.stringByAppendingPathComponent("tmp.mp4"));
+        }
+        let movieWriter = GPUImageMovieWriter(movieURL: exportUrl, size: videoTrack.naturalSize);
+        
+        group.addTarget(movieWriter);
+ 
+        movieWriter.shouldPassthroughAudio = true;
+        
+        movieFile.audioEncodingTarget = movieWriter;
+        movieFile.enableSynchronizedEncodingUsingMovieWriter(movieWriter);
+ 
+        var alreadyRecordComplate = false;
+        
+        movieWriter.completionBlock = {() in
+            if alreadyRecordComplate == false {
+                alreadyRecordComplate = true;
+                
+                movieWriter.finishRecordingWithCompletionHandler({
+                    group.removeTarget(movieWriter);
+                })
+            }
+        }
+        
+        movieWriter.failureBlock = { (error: NSError!) in
+        }
+        
+        movieWriter.startRecording();
+         */
+
+        self.activityIndicatorView.stopAnimating();
+        self.menuEnabled(true);
+    }
+
+    
     // 写真を撮ってそれを選択
     func pickImageFromCamera() {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera) {
@@ -243,11 +334,31 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         }
     }
     
+    // ライブラリから動画を選択する
+    func pickMovieFromLibrary() {
+        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.PhotoLibrary) {
+            let controller = UIImagePickerController()
+            controller.delegate = self
+            controller.sourceType = UIImagePickerControllerSourceType.PhotoLibrary
+            controller.mediaTypes = [kUTTypeMovie as String];
+            controller.allowsEditing = false;
+            self.presentViewController(controller, animated: true, completion: nil)
+        }
+    }
+
+    
     // 写真を選択した時に呼ばれる
     func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : AnyObject]) {
         
         picker.dismissViewControllerAnimated(true, completion: nil);
 
+        let mediaType: CFString = info[UIImagePickerControllerMediaType] as! CFString;
+        if mediaType == kUTTypeMovie {
+            
+            let url = info[UIImagePickerControllerMediaURL] as! NSURL;
+            execToonFilterMovie(url);
+        }
+        
         if info[UIImagePickerControllerOriginalImage] != nil {
             
             // ソースイメージ更新
