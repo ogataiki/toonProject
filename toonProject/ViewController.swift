@@ -1,8 +1,9 @@
 import UIKit
 import GPUImage
 
-class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIScrollViewDelegate {
 
+    @IBOutlet weak var imageScrollView: UIScrollView!
     @IBOutlet weak var imageView: UIImageView!
     
     @IBOutlet weak var detailSlider: UISlider!
@@ -30,6 +31,20 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
+        imageScrollView.delegate = self;
+        if let size = imageView.image?.size {
+            // imageViewのサイズがscrollView内に収まるように調整
+            let wrate = imageScrollView.frame.width / size.width
+            let hrate = imageScrollView.frame.height / size.height
+            let rate = min(wrate, hrate, 1)
+            imageView.frame.size = CGSizeMake(size.width * rate, size.height * rate)
+            
+            // contentSizeを画像サイズに設定
+            imageScrollView.contentSize = imageView.frame.size
+            // 初期表示のためcontentInsetを更新
+            updateScrollInset()
+        }
+
         levelSegmented.selectedSegmentIndex = 1;
         
         activityIndicatorView.frame = imageView.frame;
@@ -40,6 +55,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         activityIndicatorView.hidesWhenStopped = true;
         activityIndicatorView.stopAnimating();
         self.view.addSubview(activityIndicatorView);
+        
     }
 
     override func didReceiveMemoryWarning() {
@@ -240,6 +256,28 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             // フィルタかける
             execToonFilter();
         }
+    }
+    
+    
+    func viewForZoomingInScrollView(scrollView: UIScrollView) -> UIView? {
+        // ズームのために要指定
+        return imageView
+    }
+    
+    func scrollViewDidZoom(scrollView: UIScrollView) {
+        // ズームのタイミングでcontentInsetを更新
+        updateScrollInset()
+    }
+    
+    private func updateScrollInset() {
+        // imageViewの大きさからcontentInsetを再計算
+        // なお、0を下回らないようにする
+        imageScrollView.contentInset = UIEdgeInsetsMake(
+            max((imageScrollView.frame.height - imageView.frame.height)/2, 0),
+            max((imageScrollView.frame.width - imageView.frame.width)/2, 0),
+            0,
+            0
+        );
     }
 }
 
