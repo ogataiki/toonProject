@@ -137,7 +137,14 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
             // 処理速度向上のためサイズを縮小 & 撮影時の向きを反映
             let baseWidth: CGFloat = 1600;
-            let ratio: CGFloat = baseWidth / image.size.width;
+            // 長い方の辺を見て比率を決める
+            let ratio: CGFloat;
+            if image.size.width >= image.size.height {
+                ratio = baseWidth / image.size.width;
+            }
+            else {
+                ratio = baseWidth / image.size.height;
+            }
             let newSize = CGSize(width: (image.size.width * ratio), height: (image.size.height * ratio));
             UIGraphicsBeginImageContext(newSize);
             image.drawInRect(CGRectMake(0, 0, newSize.width, newSize.height));
