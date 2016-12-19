@@ -33,6 +33,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     var gpuImageView: GPUImageView? = nil;
     var filter: GPUImageFilterGroup? = nil;
     var outputSize = CGSize.zero;
+    
+    var playingMovieURL: URL? = nil;
+    var playingMovie: GPUImageMovie? = nil;
+    var writtingMovie: GPUImageMovieWriter? = nil;
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -101,6 +105,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             , preferredStyle:  UIAlertControllerStyle.actionSheet);
         
         // Defaultボタン
+/*
         let cameraAction: UIAlertAction = UIAlertAction(title: "カメラで写真撮影", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickImageFromCamera();
@@ -109,6 +114,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             (action: UIAlertAction) -> Void in
             self.pickMovieFromCamera();
         })
+ */
         let libraryAction: UIAlertAction = UIAlertAction(title: "写真を選択", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickImageFromLibrary();
@@ -124,8 +130,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         })
         
         alert.addAction(cancelAction);
-        alert.addAction(cameraAction);
-        alert.addAction(movieAction);
+//        alert.addAction(cameraAction);
+//        alert.addAction(movieAction);
         alert.addAction(libraryAction);
         alert.addAction(libraryMovieAction);
         
@@ -138,6 +144,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         if self.sourceImage != nil {
             execToonFilter();
         }
+        else if self.playingMovie != nil && self.playingMovieURL != nil {
+            execToonFilterMovie(self.playingMovieURL!);
+        }
         else {
             stopPreview();
             resumePreview();
@@ -147,6 +156,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @IBAction func edgeChange(_ sender: UISwitch) {
         if self.sourceImage != nil {
             execToonFilter();
+        }
+        else if self.playingMovie != nil && self.playingMovieURL != nil {
+            execToonFilterMovie(self.playingMovieURL!);
         }
         else {
             stopPreview();
@@ -158,6 +170,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         if self.sourceImage != nil {
             execToonFilter();
         }
+        else if self.playingMovie != nil && self.playingMovieURL != nil {
+            execToonFilterMovie(self.playingMovieURL!);
+        }
         else {
             stopPreview();
             resumePreview();
@@ -167,6 +182,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @IBAction func levelChange(_ sender: UISegmentedControl) {
         if self.sourceImage != nil {
             execToonFilter();
+        }
+        else if self.playingMovie != nil && self.playingMovieURL != nil {
+            execToonFilterMovie(self.playingMovieURL!);
         }
         else {
             stopPreview();
@@ -261,54 +279,82 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     func execToonFilterMovie(_ url: URL) {
         
         menuEnabled(false);
-        activityIndicatorView.startAnimating()
+        activityIndicatorView.startAnimating();
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.0));
         
-        //表示するためのviewを用意
-        let group = toonFilterGpuImageView(gpuImageView!);
-        
-        let movieFile = GPUImageMovie(url: url);
-        movieFile?.playAtActualSpeed = true;
-        movieFile?.addTarget(group);
-        movieFile?.startProcessing();
+        stopPreview();
+        addGPUImageView();
 
-        /*
-        let asset = AVURLAsset(URL: url);
-        let videoTracks = asset.tracksWithMediaType(AVMediaTypeVideo);
-        let videoTrack = videoTracks[0];
-        var exportUrl: NSURL?;
-        if let dir : NSString = NSSearchPathForDirectoriesInDomains( NSSearchPathDirectory.DocumentDirectory, NSSearchPathDomainMask.AllDomainsMask, true ).first {
-            exportUrl = NSURL(fileURLWithPath: dir.stringByAppendingPathComponent("tmp.mp4"));
-        }
-        let movieWriter = GPUImageMovieWriter(movieURL: exportUrl, size: videoTrack.naturalSize);
+        // 元動画取得
+        playingMovie = GPUImageMovie(url: url);
+        playingMovie!.playAtActualSpeed = true;
         
-        group.addTarget(movieWriter);
- 
-        movieWriter.shouldPassthroughAudio = true;
+        let videoAsst = AVAsset(url: url);
+        let clipVideoTrack = videoAsst.tracks(withMediaType: AVMediaTypeVideo)[0];
+        let movieSize = clipVideoTrack.naturalSize;
         
-        movieFile.audioEncodingTarget = movieWriter;
-        movieFile.enableSynchronizedEncodingUsingMovieWriter(movieWriter);
- 
-        var alreadyRecordComplate = false;
-        
-        movieWriter.completionBlock = {() in
-            if alreadyRecordComplate == false {
-                alreadyRecordComplate = true;
-                
-                movieWriter.finishRecordingWithCompletionHandler({
-                    group.removeTarget(movieWriter);
-                })
-            }
-        }
-        
-        movieWriter.failureBlock = { (error: NSError!) in
-        }
-        
-        movieWriter.startRecording();
-         */
 
+        let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true); //アプリからアクセスできるディレクトリを取得
+        let documentsDirectory = paths[0];
+        let newFilePath = "\(documentsDirectory)/newTemp.mp4";
+        let movieURL = NSURL(fileURLWithPath: newFilePath);
+// なぜか動かない...
+//        self.writtingMovie = GPUImageMovieWriter(movieURL: movieURL as URL!, size: movieSize, fileType:AVFileTypeMPEG4, outputSettings:nil)!; //保存する動画のサイズ
+        if let write = self.writtingMovie {
+            write.assetWriter.movieFragmentInterval = kCMTimeInvalid; //これ書かないと動作が不安定になります
+            write.shouldPassthroughAudio = true;
+            write.encodingLiveVideo = true;
+        }
+        
+        self.filter = toonFilter(movieSize);
+        filter!.addTarget(gpuImageView);
+        
+        playingMovie!.addTarget(filter);
+        if let write = self.writtingMovie {
+            filter!.addTarget(write);
+        }
+        
+        playingMovieURL = url;
+        
+        //再生時
+        playingMovie!.startProcessing();
+        if let write = self.writtingMovie {
+            write.startRecording();
+        }
+        
         self.activityIndicatorView.stopAnimating();
         self.menuEnabled(true);
+        
+        _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(ViewController.movieProgress), userInfo: nil, repeats: false);
+    }
+    
+    func movieProgress() {
+        if let movie = playingMovie {
+            //規定のレンダリング時間に達するまでは0.5秒に一度進捗を監視する
+            if(movie.progress >= 1){
+                
+                if self.writtingMovie != nil {
+                    let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true); //アプリからアクセスできるディレクトリを取得
+                    let documentsDirectory = paths[0];
+                    let newFilePath = "\(documentsDirectory)/newTemp.mp4";
+                    UISaveVideoAtPathToSavedPhotosAlbum(newFilePath, self, #selector(ViewController.movieSavingFinish), nil)
+                }
+
+                stopPreview();
+                
+            }else{
+                _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(ViewController.movieProgress), userInfo: nil, repeats: false);
+            }
+        }
+    }
+    
+    func movieSavingFinish(filePath: String!, didFinishSavingWithError: NSError, contextInfo:UnsafeRawPointer) {
+        if let error = didFinishSavingWithError as NSError? {
+            print("error")
+        }
+        else{
+            print("success!")
+        }
     }
     
     func toonFilter(_ size: CGSize) -> GPUImageFilterGroup {
@@ -347,12 +393,25 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         if self.gpuImageView != nil {
             self.gpuImageVideoCamera!.stopCapture();
             self.gpuImageVideoCamera!.removeAllTargets();
-            self.filter!.removeAllTargets();
+            if self.filter != nil {
+                self.filter!.removeAllTargets();
+                self.filter = nil;
+            }
             self.gpuImageView!.removeFromSuperview();
+            self.gpuImageView = nil;
+        }
+        if self.playingMovie != nil {
+            self.playingMovie?.removeAllTargets();
+            self.playingMovie = nil;
+        }
+        if self.filter != nil {
+            self.filter!.removeAllTargets();
+            self.filter = nil;
+        }
+        if self.writtingMovie != nil {
         }
     }
-    func resumePreview() {
-
+    func addGPUImageView() {
         var viewSize = CGSize.zero;
         switch UIApplication.shared.statusBarOrientation {
         case .portrait:
@@ -380,6 +439,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.gpuImageView = GPUImageView(frame: CGRect(x: 0,y: 0,width: viewSize.width,height: viewSize.height));
         self.gpuImageView!.fillMode = kGPUImageFillModePreserveAspectRatio;
         self.imageView.addSubview(self.gpuImageView!);
+    }
+    func resumePreview() {
+
+        addGPUImageView();
         
         self.filter = self.toonFilter(self.outputSize);
         self.gpuImageVideoCamera!.addTarget(self.filter);
