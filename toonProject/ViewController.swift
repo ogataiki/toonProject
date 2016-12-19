@@ -29,6 +29,11 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     var filteredImage: UIImage? = nil;
     var isEdge = false;
     
+    var gpuImageVideoCamera: GPUImageVideoCamera? = nil;
+    var gpuImageView: GPUImageView? = nil;
+    var filter: GPUImageFilterGroup? = nil;
+    var outputSize = CGSize.zero;
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
@@ -36,76 +41,85 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         toolView.backgroundColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.8);
         
         imageScrollView.delegate = self;
-        if let size = imageView.image?.size {
-            // imageViewのサイズがscrollView内に収まるように調整
-            let wrate = imageScrollView.frame.width / size.width
-            let hrate = imageScrollView.frame.height / size.height
-            let rate = min(wrate, hrate, 1)
-            imageView.frame.size = CGSizeMake(size.width * rate, size.height * rate)
-            
-            // contentSizeを画像サイズに設定
-            imageScrollView.contentSize = imageView.frame.size
-            // 初期表示のためcontentInsetを更新
-            updateScrollInset()
-        }
+        
+        // imageViewのサイズがscrollView内に収まるように調整
+        let size = imageView.frame.size;
+        let wrate = imageScrollView.frame.width / size.width;
+        let hrate = imageScrollView.frame.height / size.height;
+        let rate = min(wrate, hrate, 1);
+        imageView.frame.size = CGSize(width: size.width * rate, height: size.height * rate);
+        imageScrollView.contentSize = imageView.frame.size;
+        updateScrollInset();
+        
+        // imageViewと同サイズのプレビューを作成
+        gpuImageVideoCamera = GPUImageVideoCamera(sessionPreset: AVCaptureSessionPresetPhoto, cameraPosition: .back);
+        
+        let output = gpuImageVideoCamera!.captureSession.outputs[gpuImageVideoCamera!.captureSession.outputs.endIndex - 1] as! AVCaptureVideoDataOutput;
+        let setting:NSDictionary = output.videoSettings as NSDictionary;
+        outputSize.width  = CGFloat((setting["Width"] as! NSNumber).floatValue);
+        outputSize.height = CGFloat((setting["Height"] as! NSNumber).floatValue);
+        print(outputSize);
+        
+        resumePreview();
 
+        
+        
         levelSegmented.selectedSegmentIndex = 1;
         
         activityIndicatorView.frame = imageView.frame;
-        activityIndicatorView.center = CGPointMake(self.view.frame.size.width*0.5, imageView.center.y);
+        activityIndicatorView.center = CGPoint(x: self.view.frame.size.width*0.5, y: imageView.center.y);
         activityIndicatorView.hidesWhenStopped = false;
-        activityIndicatorView.activityIndicatorViewStyle = UIActivityIndicatorViewStyle.Gray;
-        activityIndicatorView.color = UIColor.cyanColor();
+        activityIndicatorView.activityIndicatorViewStyle = UIActivityIndicatorViewStyle.gray;
+        activityIndicatorView.color = UIColor.cyan;
         activityIndicatorView.hidesWhenStopped = true;
         activityIndicatorView.stopAnimating();
         self.view.addSubview(activityIndicatorView);
-        
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
     
-    func menuEnabled(value: Bool) {
-        detailSlider.enabled = value;
-        edgeSwitch.enabled = value;
-        edgeSlider.enabled = value;
-        levelSegmented.enabled = value;
-        imageSelectSeg.enabled = value;
-        saveButton.enabled = value;
+    func menuEnabled(_ value: Bool) {
+        detailSlider.isEnabled = value;
+        edgeSwitch.isEnabled = value;
+        edgeSlider.isEnabled = value;
+        levelSegmented.isEnabled = value;
+        imageSelectSeg.isEnabled = value;
+        saveButton.isEnabled = value;
     }
 
-    @IBAction func cameraAction(sender: UIBarButtonItem) {
+    @IBAction func cameraAction(_ sender: UIBarButtonItem) {
         
-        if activityIndicatorView.isAnimating() {
+        if activityIndicatorView.isAnimating {
             return;
         }
 
         let alert: UIAlertController = UIAlertController(title: "写真を選択"
             , message: nil
-            , preferredStyle:  UIAlertControllerStyle.ActionSheet);
+            , preferredStyle:  UIAlertControllerStyle.actionSheet);
         
         // Defaultボタン
-        let cameraAction: UIAlertAction = UIAlertAction(title: "カメラで写真撮影", style: UIAlertActionStyle.Default, handler:{
+        let cameraAction: UIAlertAction = UIAlertAction(title: "カメラで写真撮影", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickImageFromCamera();
         })
-        let movieAction: UIAlertAction = UIAlertAction(title: "カメラで動画撮影", style: UIAlertActionStyle.Default, handler:{
+        let movieAction: UIAlertAction = UIAlertAction(title: "カメラで動画撮影", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickMovieFromCamera();
         })
-        let libraryAction: UIAlertAction = UIAlertAction(title: "写真を選択", style: UIAlertActionStyle.Default, handler:{
+        let libraryAction: UIAlertAction = UIAlertAction(title: "写真を選択", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickImageFromLibrary();
         })
-        let libraryMovieAction: UIAlertAction = UIAlertAction(title: "動画を選択", style: UIAlertActionStyle.Default, handler:{
+        let libraryMovieAction: UIAlertAction = UIAlertAction(title: "動画を選択", style: UIAlertActionStyle.default, handler:{
             (action: UIAlertAction) -> Void in
             self.pickMovieFromLibrary();
         })
         
         // Cancelボタン
-        let cancelAction: UIAlertAction = UIAlertAction(title: "cancel", style: UIAlertActionStyle.Cancel, handler:{
+        let cancelAction: UIAlertAction = UIAlertAction(title: "cancel", style: UIAlertActionStyle.cancel, handler:{
             (action: UIAlertAction) -> Void in
         })
         
@@ -115,28 +129,52 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         alert.addAction(libraryAction);
         alert.addAction(libraryMovieAction);
         
-        presentViewController(alert, animated: true, completion: nil)
+        present(alert, animated: true, completion: nil)
     }
     
     
     
-    @IBAction func detailValueChange(sender: AnyObject) {
-        execToonFilter();
+    @IBAction func detailValueChange(_ sender: AnyObject) {
+        if self.sourceImage != nil {
+            execToonFilter();
+        }
+        else {
+            stopPreview();
+            resumePreview();
+        }
     }
 
-    @IBAction func edgeChange(sender: UISwitch) {
-        execToonFilter();
+    @IBAction func edgeChange(_ sender: UISwitch) {
+        if self.sourceImage != nil {
+            execToonFilter();
+        }
+        else {
+            stopPreview();
+            resumePreview();
+        }
     }
     
-    @IBAction func edgeValueChange(sender: UISlider) {
-        execToonFilter();
+    @IBAction func edgeValueChange(_ sender: UISlider) {
+        if self.sourceImage != nil {
+            execToonFilter();
+        }
+        else {
+            stopPreview();
+            resumePreview();
+        }
     }
     
-    @IBAction func levelChange(sender: UISegmentedControl) {
-        execToonFilter();
+    @IBAction func levelChange(_ sender: UISegmentedControl) {
+        if self.sourceImage != nil {
+            execToonFilter();
+        }
+        else {
+            stopPreview();
+            resumePreview();
+        }
     }
     
-    @IBAction func imageSourceChange(sender: UISegmentedControl) {
+    @IBAction func imageSourceChange(_ sender: UISegmentedControl) {
         if(sender.selectedSegmentIndex == 0) {
             if let source = sourceImage {
                 self.imageView.image = source;
@@ -149,12 +187,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         }
     }
     
-    @IBAction func saveAction(sender: UIBarButtonItem) {
+    @IBAction func saveAction(_ sender: UIBarButtonItem) {
         if let i = self.filteredImage {
             UIImageWriteToSavedPhotosAlbum(i, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil);
         }
     }
-    func image(image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutablePointer<Void>) {
+    func image(_ image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutableRawPointer) {
         if error != nil {
             //プライバシー設定不許可など書き込み失敗時は -3310 (ALAssetsLibraryDataUnavailableError)
             print(error.code)
@@ -162,13 +200,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         else {
             let alert: UIAlertController = UIAlertController(title: "画像を保存しました"
                 , message: nil
-                , preferredStyle:  UIAlertControllerStyle.Alert);
+                , preferredStyle:  UIAlertControllerStyle.alert);
             // Defaultボタン
-            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler:{
+            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.default, handler:{
                 (action: UIAlertAction) -> Void in
             })
             alert.addAction(okAction);
-            presentViewController(alert, animated: true, completion: nil)
+            present(alert, animated: true, completion: nil)
         }
     }
     
@@ -176,7 +214,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         menuEnabled(false);
         activityIndicatorView.startAnimating()
-        NSRunLoop.currentRunLoop().runUntilDate(NSDate(timeIntervalSinceNow: 0.0));
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.0));
         
         // バックグラウンドで処理すると途中で処理がおかしくなってへんな画像が生成されることがある。
         // フィルタかける
@@ -197,11 +235,11 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             }
             let newSize = CGSize(width: (image.size.width * ratio), height: (image.size.height * ratio));
             UIGraphicsBeginImageContext(newSize);
-            image.drawInRect(CGRectMake(0, 0, newSize.width, newSize.height));
-            image = UIGraphicsGetImageFromCurrentImageContext();
+            image.draw(in: CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height));
+            image = UIGraphicsGetImageFromCurrentImageContext()!;
             UIGraphicsEndImageContext();
             
-            if let out = toonFilter(image.size).imageByFilteringImage(image) {
+            if let out = toonFilter(image.size).image(byFilteringImage: image) {
                 self.filteredImage = out;
                 self.imageSelectSeg.selectedSegmentIndex = 1;
                 
@@ -220,22 +258,19 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.menuEnabled(true);
     }
     
-    func execToonFilterMovie(url: NSURL) {
+    func execToonFilterMovie(_ url: URL) {
         
         menuEnabled(false);
         activityIndicatorView.startAnimating()
-        NSRunLoop.currentRunLoop().runUntilDate(NSDate(timeIntervalSinceNow: 0.0));
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.0));
         
         //表示するためのviewを用意
-        let gpuImageView = GPUImageView(frame: self.imageView.frame);
-        self.view.addSubview(gpuImageView);
+        let group = toonFilterGpuImageView(gpuImageView!);
         
-        let group = toonFilterGpuImageView(gpuImageView);
-        
-        let movieFile = GPUImageMovie(URL: url);
-        movieFile.playAtActualSpeed = true;
-        movieFile.addTarget(group);
-        movieFile.startProcessing();
+        let movieFile = GPUImageMovie(url: url);
+        movieFile?.playAtActualSpeed = true;
+        movieFile?.addTarget(group);
+        movieFile?.startProcessing();
 
         /*
         let asset = AVURLAsset(URL: url);
@@ -276,17 +311,17 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.menuEnabled(true);
     }
     
-    func toonFilter(size: CGSize) -> GPUImageFilterGroup {
+    func toonFilter(_ size: CGSize) -> GPUImageFilterGroup {
         
         let gaussian = GPUImageGaussianBlurFilter();
         gaussian.blurRadiusInPixels = CGFloat(detailSlider.value);
 
         let toonShader = GPUImageFilter(fragmentShaderFromFile: "toon");
-        toonShader.setFloat(GLfloat(size.width), forUniformName: "imageWidth");
-        toonShader.setFloat(GLfloat(size.height), forUniformName: "imageHeight");
-        toonShader.setFloat(GLfloat((self.edgeSwitch.on) ? 1.0 : 0.0), forUniformName: "edge");
-        toonShader.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
-        toonShader.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
+        toonShader?.setFloat(GLfloat(size.width), forUniformName: "imageWidth");
+        toonShader?.setFloat(GLfloat(size.height), forUniformName: "imageHeight");
+        toonShader?.setFloat(GLfloat((self.edgeSwitch.isOn) ? 1.0 : 0.0), forUniformName: "edge");
+        toonShader?.setFloat(GLfloat(self.edgeSlider.value), forUniformName: "edgeValue");
+        toonShader?.setFloat(GLfloat(self.levelSegmented.selectedSegmentIndex), forUniformName: "levelValue");
         
         let group = GPUImageFilterGroup();
         group.addFilter(gaussian);
@@ -295,12 +330,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         group.terminalFilter = toonShader;
         gaussian.addTarget(toonShader);
         
-        group.forceProcessingAtSize(size);
+        group.forceProcessing(at: size);
 
         return group;
     }
     
-    func toonFilterGpuImageView(gpuimageview: GPUImageView) -> GPUImageFilterGroup {
+    func toonFilterGpuImageView(_ gpuimageview: GPUImageView) -> GPUImageFilterGroup {
         
         let group = toonFilter(gpuimageview.frame.size);
         group.addTarget(gpuimageview);
@@ -308,53 +343,110 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         return group;
     }
 
+    func stopPreview() {
+        if self.gpuImageView != nil {
+            self.gpuImageVideoCamera!.stopCapture();
+            self.gpuImageVideoCamera!.removeAllTargets();
+            self.filter!.removeAllTargets();
+            self.gpuImageView!.removeFromSuperview();
+        }
+    }
+    func resumePreview() {
 
+        var viewSize = CGSize.zero;
+        switch UIApplication.shared.statusBarOrientation {
+        case .portrait:
+            self.gpuImageVideoCamera!.outputImageOrientation = .portrait;
+            viewSize.width = imageView.frame.size.width;
+            viewSize.height = imageView.frame.size.height;
+        case .portraitUpsideDown:
+            self.gpuImageVideoCamera!.outputImageOrientation = .portraitUpsideDown;
+            viewSize.width = imageView.frame.size.width;
+            viewSize.height = imageView.frame.size.height;
+        case .landscapeLeft:
+            self.gpuImageVideoCamera!.outputImageOrientation = .landscapeLeft;
+            viewSize.width = imageView.frame.size.width;
+            viewSize.height = imageView.frame.size.height;
+        case .landscapeRight:
+            self.gpuImageVideoCamera!.outputImageOrientation = .landscapeRight;
+            viewSize.width = imageView.frame.size.width;
+            viewSize.height = imageView.frame.size.height;
+        case.unknown:
+            self.gpuImageVideoCamera!.outputImageOrientation = .unknown;
+            viewSize.width = imageView.frame.size.width;
+            viewSize.height = imageView.frame.size.height;
+        }
+        
+        self.gpuImageView = GPUImageView(frame: CGRect(x: 0,y: 0,width: viewSize.width,height: viewSize.height));
+        self.gpuImageView!.fillMode = kGPUImageFillModePreserveAspectRatio;
+        self.imageView.addSubview(self.gpuImageView!);
+        
+        self.filter = self.toonFilter(self.outputSize);
+        self.gpuImageVideoCamera!.addTarget(self.filter);
+        self.filter!.addTarget(self.gpuImageView);
+        self.gpuImageVideoCamera!.startCapture();
+    }
     
     // 写真を撮ってそれを選択
     func pickImageFromCamera() {
-        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera) {
-            let controller = UIImagePickerController()
-            controller.delegate = self;
-            controller.sourceType = UIImagePickerControllerSourceType.Camera;
-            self.presentViewController(controller, animated: true, completion: nil);
-        }
+
+        stopPreview();
+        
+        let vc = self.storyboard?.instantiateViewController(withIdentifier: "GPUPhotoCameraVC") as! GPUPhotoCameraVC;
+        vc.parentVC = self;
+        vc.blurRadiusInPixels = CGFloat(detailSlider.value);
+        vc.edge = GLfloat((self.edgeSwitch.isOn) ? 1.0 : 0.0);
+        vc.edgeValue = GLfloat(self.edgeSlider.value);
+        vc.levelValue = GLfloat(self.levelSegmented.selectedSegmentIndex);
+        vc.gpuImageVideoCamera = gpuImageVideoCamera;
+        vc.outputSize = outputSize;
+        self.present(vc, animated: true, completion: nil);        
     }
 
     func pickMovieFromCamera() {
+        
+        stopPreview();
+
     }
 
     // ライブラリから写真を選択する
     func pickImageFromLibrary() {
-        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.PhotoLibrary) {
+
+        stopPreview();
+        
+        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary) {
             let controller = UIImagePickerController();
             controller.delegate = self;
-            controller.sourceType = UIImagePickerControllerSourceType.PhotoLibrary;
-            self.presentViewController(controller, animated: true, completion: nil);
+            controller.sourceType = UIImagePickerControllerSourceType.photoLibrary;
+            self.present(controller, animated: true, completion: nil);
         }
     }
     
     // ライブラリから動画を選択する
     func pickMovieFromLibrary() {
-        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.PhotoLibrary) {
+        
+        stopPreview();
+        
+        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary) {
             let controller = UIImagePickerController()
             controller.delegate = self
-            controller.sourceType = UIImagePickerControllerSourceType.PhotoLibrary
+            controller.sourceType = UIImagePickerControllerSourceType.photoLibrary
             controller.mediaTypes = [kUTTypeMovie as String];
             controller.allowsEditing = false;
-            self.presentViewController(controller, animated: true, completion: nil)
+            self.present(controller, animated: true, completion: nil)
         }
     }
 
     
     // 写真を選択した時に呼ばれる
-    func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : AnyObject]) {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
         
-        picker.dismissViewControllerAnimated(true, completion: nil);
+        picker.dismiss(animated: true, completion: nil);
 
         let mediaType: CFString = info[UIImagePickerControllerMediaType] as! CFString;
         if mediaType == kUTTypeMovie {
             
-            let url = info[UIImagePickerControllerMediaURL] as! NSURL;
+            let url = info[UIImagePickerControllerMediaURL] as! URL;
             execToonFilterMovie(url);
         }
         
@@ -369,25 +461,51 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     }
     
     
-    func viewForZoomingInScrollView(scrollView: UIScrollView) -> UIView? {
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         // ズームのために要指定
-        return imageView
+        if imageView.image != nil {
+            return imageView;
+        }
+        else if gpuImageView != nil {
+            return gpuImageView!;
+        }
+        return imageView;
     }
     
-    func scrollViewDidZoom(scrollView: UIScrollView) {
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
         // ズームのタイミングでcontentInsetを更新
         updateScrollInset()
     }
     
-    private func updateScrollInset() {
+    fileprivate func updateScrollInset() {
         // imageViewの大きさからcontentInsetを再計算
         // なお、0を下回らないようにする
+        let frame: CGRect;
+        if imageView.image != nil {
+            frame = imageView.frame;
+        }
+        else if gpuImageView != nil {
+            frame = gpuImageView!.frame;
+        }
+        else {
+            frame = imageView.frame;
+        }
         imageScrollView.contentInset = UIEdgeInsetsMake(
-            max((imageScrollView.frame.height - imageView.frame.height)/2, 0),
-            max((imageScrollView.frame.width - imageView.frame.width)/2, 0),
+            max((imageScrollView.frame.height - frame.height)/2, 0),
+            max((imageScrollView.frame.width - frame.width)/2, 0),
             0,
             0
         );
+    }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        
+        super.viewWillTransition(to: size, with: coordinator);
+        
+        coordinator.animate(alongsideTransition: { context in
+            self.stopPreview();
+            self.resumePreview();
+        }, completion: nil);
     }
 }
 
