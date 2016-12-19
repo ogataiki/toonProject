@@ -340,8 +340,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                     UISaveVideoAtPathToSavedPhotosAlbum(newFilePath, self, #selector(ViewController.movieSavingFinish), nil)
                 }
 
-                stopPreview();
-                
             }else{
                 _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(ViewController.movieProgress), userInfo: nil, repeats: false);
             }
@@ -395,7 +393,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             self.gpuImageVideoCamera!.removeAllTargets();
             if self.filter != nil {
                 self.filter!.removeAllTargets();
-                self.filter = nil;
             }
             self.gpuImageView!.removeFromSuperview();
             self.gpuImageView = nil;
