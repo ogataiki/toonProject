@@ -175,18 +175,49 @@
                                     <constraint firstItem="mrp-MW-rpo" firstAttribute="top" secondItem="asK-qG-jVC" secondAttribute="bottom" constant="17" id="wxm-Q4-Upu"/>
                                 </constraints>
                             </view>
+                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Bra-Xc-kBJ">
+                                <rect key="frame" x="0.0" y="623" width="375" height="44"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="44" id="FBc-Ie-4jG"/>
+                                </constraints>
+                                <items>
+                                    <barButtonItem systemItem="done" id="kqH-7a-zWm">
+                                        <connections>
+                                            <action selector="movieFinishAction:" destination="BYZ-38-t0r" id="Uan-9H-AR7"/>
+                                        </connections>
+                                    </barButtonItem>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="M6h-S0-Qf9"/>
+                                    <barButtonItem style="plain" id="iQD-Wz-XRh">
+                                        <progressView key="customView" opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" progressViewStyle="bar" id="0we-Li-IB0">
+                                            <rect key="frame" x="63" y="21" width="252" height="3"/>
+                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                            <color key="trackTintColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                                        </progressView>
+                                    </barButtonItem>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="gbj-b7-Q7B"/>
+                                    <barButtonItem systemItem="save" id="wxO-eD-d9y">
+                                        <connections>
+                                            <action selector="movieSaveAction:" destination="BYZ-38-t0r" id="fjK-V7-lYI"/>
+                                        </connections>
+                                    </barButtonItem>
+                                </items>
+                                <color key="barTintColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                            </toolbar>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="rJQ-jH-pVR" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="2sQ-SS-8Gx"/>
                             <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="wm7-zq-GNb" secondAttribute="bottom" id="EL4-4v-OhR"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="Bra-Xc-kBJ" secondAttribute="bottom" id="FD7-rN-dKW"/>
                             <constraint firstAttribute="trailing" secondItem="wm7-zq-GNb" secondAttribute="trailing" id="K3z-Ht-EKf"/>
+                            <constraint firstItem="Bra-Xc-kBJ" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="MWb-iT-X4y"/>
                             <constraint firstItem="rJQ-jH-pVR" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="Osk-U9-kL6"/>
                             <constraint firstItem="cOe-ll-Awu" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="WOe-qu-ubW"/>
                             <constraint firstAttribute="trailing" secondItem="cOe-ll-Awu" secondAttribute="trailing" id="gPz-Tg-WIO"/>
                             <constraint firstAttribute="trailing" secondItem="rJQ-jH-pVR" secondAttribute="trailing" id="iVr-SZ-iEd"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="loW-Iu-21u"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="top" secondItem="cOe-ll-Awu" secondAttribute="bottom" id="qjd-i0-CTS"/>
+                            <constraint firstAttribute="trailing" secondItem="Bra-Xc-kBJ" secondAttribute="trailing" id="uTk-52-zSj"/>
                             <constraint firstItem="wm7-zq-GNb" firstAttribute="top" secondItem="rJQ-jH-pVR" secondAttribute="bottom" id="x36-EM-L4l"/>
                         </constraints>
                     </view>
@@ -198,13 +229,16 @@
                         <outlet property="imageSelectSeg" destination="qSM-YX-GA7" id="lFW-T7-MCS"/>
                         <outlet property="imageView" destination="OjW-Ey-Mcd" id="Wgj-kp-qEw"/>
                         <outlet property="levelSegmented" destination="saF-od-MBY" id="D4h-he-dhB"/>
+                        <outlet property="movieProgressView" destination="0we-Li-IB0" id="Apj-Zu-oDe"/>
+                        <outlet property="movieSaveButton" destination="wxO-eD-d9y" id="zdZ-eg-ivC"/>
+                        <outlet property="movieToolBar" destination="Bra-Xc-kBJ" id="s6d-kZ-0v8"/>
                         <outlet property="saveButton" destination="acc-Mh-OrG" id="eJT-FJ-Jtn"/>
                         <outlet property="toolView" destination="cOe-ll-Awu" id="oEp-ZS-Thm"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="650" y="422"/>
+            <point key="canvasLocation" x="648.79999999999995" y="421.43928035982015"/>
         </scene>
         <!--Photo CameraVC-->
         <scene sceneID="j3R-lI-WMQ">

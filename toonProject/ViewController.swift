@@ -20,6 +20,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBOutlet weak var saveButton: UIBarButtonItem!
     
+    @IBOutlet weak var movieToolBar: UIToolbar!
+    @IBOutlet weak var movieProgressView: UIProgressView!
+    @IBOutlet weak var movieSaveButton: UIBarButtonItem!
+    
+    
+    
+    
     let activityIndicatorView = UIActivityIndicatorView();
 
     let shaderFilter = GPUImageFilter(fragmentShaderFromFile: "toon");
@@ -42,6 +49,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
+        movieToolBar.isHidden = true;
+        movieSaveButton.isEnabled = false;
+        
+        imageSelectSeg.isEnabled = false;
+        saveButton.isEnabled = false;
+    
         toolView.backgroundColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.8);
         
         imageScrollView.delegate = self;
@@ -207,13 +220,23 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBAction func saveAction(_ sender: UIBarButtonItem) {
         if let i = self.filteredImage {
-            UIImageWriteToSavedPhotosAlbum(i, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil);
+            UIImageWriteToSavedPhotosAlbum(i, self, #selector(self.saveImage(_:didFinishSavingWithError:contextInfo:)), nil);
         }
     }
-    func image(_ image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutableRawPointer) {
+    func saveImage(_ image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutableRawPointer) {
         if error != nil {
             //プライバシー設定不許可など書き込み失敗時は -3310 (ALAssetsLibraryDataUnavailableError)
             print(error.code)
+            let alert: UIAlertController = UIAlertController(title: "保存に失敗しました"
+                , message: nil
+                , preferredStyle:  UIAlertControllerStyle.alert);
+            // Defaultボタン
+            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.default, handler:{
+                (action: UIAlertAction) -> Void in
+            })
+            alert.addAction(okAction);
+            present(alert, animated: true, completion: nil)
+
         }
         else {
             let alert: UIAlertController = UIAlertController(title: "画像を保存しました"
@@ -294,32 +317,42 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let movieSize = clipVideoTrack.naturalSize;
         
 
+        // フィルタ実行動画の書き込み準備
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true); //アプリからアクセスできるディレクトリを取得
         let documentsDirectory = paths[0];
         let newFilePath = "\(documentsDirectory)/newTemp.mp4";
+        let manager = FileManager();
+        try! manager.removeItem(atPath: newFilePath);
+        
         let movieURL = NSURL(fileURLWithPath: newFilePath);
-// なぜか動かない...
-//        self.writtingMovie = GPUImageMovieWriter(movieURL: movieURL as URL!, size: movieSize, fileType:AVFileTypeMPEG4, outputSettings:nil)!; //保存する動画のサイズ
-        if let write = self.writtingMovie {
-            write.assetWriter.movieFragmentInterval = kCMTimeInvalid; //これ書かないと動作が不安定になります
-            write.shouldPassthroughAudio = true;
-            write.encodingLiveVideo = true;
+        self.writtingMovie = GPUImageMovieWriter(movieURL: movieURL as URL!, size: movieSize, fileType:AVFileTypeMPEG4, outputSettings:nil)!; //保存する動画のサイズ
+        if self.writtingMovie != nil {
+            self.writtingMovie!.assetWriter.movieFragmentInterval = kCMTimeInvalid; //これ書かないと動作が不安定になります
+            self.writtingMovie!.shouldPassthroughAudio = true;
+            self.writtingMovie!.encodingLiveVideo = true;
         }
         
         self.filter = toonFilter(movieSize);
         filter!.addTarget(gpuImageView);
         
         playingMovie!.addTarget(filter);
-        if let write = self.writtingMovie {
-            filter!.addTarget(write);
+        if self.writtingMovie != nil {
+            filter!.addTarget(self.writtingMovie!);
         }
         
         playingMovieURL = url;
         
+        UIView.animate(withDuration: 0.3, animations: {
+            self.movieToolBar.isHidden = false;
+        }, completion: { finished in
+        })
+        
+        movieProgressView.progress = playingMovie!.progress;
+        
         //再生時
         playingMovie!.startProcessing();
-        if let write = self.writtingMovie {
-            write.startRecording();
+        if self.writtingMovie != nil {
+            self.writtingMovie!.startRecording();
         }
         
         self.activityIndicatorView.stopAnimating();
@@ -330,30 +363,65 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     func movieProgress() {
         if let movie = playingMovie {
+            movieProgressView.progress = movie.progress;
+
             //規定のレンダリング時間に達するまでは0.5秒に一度進捗を監視する
             if(movie.progress >= 1){
-                
-                if self.writtingMovie != nil {
-                    let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true); //アプリからアクセスできるディレクトリを取得
-                    let documentsDirectory = paths[0];
-                    let newFilePath = "\(documentsDirectory)/newTemp.mp4";
-                    UISaveVideoAtPathToSavedPhotosAlbum(newFilePath, self, #selector(ViewController.movieSavingFinish), nil)
-                }
-
+                self.movieSaveButton.isEnabled = true;
+                self.writtingMovie!.finishRecording();
             }else{
                 _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(ViewController.movieProgress), userInfo: nil, repeats: false);
             }
         }
     }
     
-    func movieSavingFinish(filePath: String!, didFinishSavingWithError: NSError, contextInfo:UnsafeRawPointer) {
-        if let error = didFinishSavingWithError as NSError? {
-            print("error")
+    @IBAction func movieFinishAction(_ sender: UIBarButtonItem) {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.movieToolBar.isHidden = true;
+            self.movieSaveButton.isEnabled = false;
+
+        }, completion: { finished in
+            self.stopPreview();
+            self.resumePreview();
+            self.imageSelectSeg.isEnabled = false;
+            self.saveButton.isEnabled = false;
+        })
+    }
+    @IBAction func movieSaveAction(_ sender: UIBarButtonItem) {
+        let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true); //アプリからアクセスできるディレクトリを取得
+        let documentsDirectory = paths[0];
+        let newFilePath = "\(documentsDirectory)/newTemp.mp4";
+        UISaveVideoAtPathToSavedPhotosAlbum(newFilePath, self, #selector(self.saveMovie(_:didFinishSavingWithError:contextInfo:)), nil)
+    }
+    
+    func saveMovie(_ image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutableRawPointer) {
+        if error != nil {
+            //プライバシー設定不許可など書き込み失敗時は -3310 (ALAssetsLibraryDataUnavailableError)
+            print(error.code)
+            let alert: UIAlertController = UIAlertController(title: "保存に失敗しました"
+                , message: nil
+                , preferredStyle:  UIAlertControllerStyle.alert);
+            // Defaultボタン
+            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.default, handler:{
+                (action: UIAlertAction) -> Void in
+            })
+            alert.addAction(okAction);
+            present(alert, animated: true, completion: nil)
+            
         }
-        else{
-            print("success!")
+        else {
+            let alert: UIAlertController = UIAlertController(title: "動画を保存しました"
+                , message: nil
+                , preferredStyle:  UIAlertControllerStyle.alert);
+            // Defaultボタン
+            let okAction: UIAlertAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.default, handler:{
+                (action: UIAlertAction) -> Void in
+            })
+            alert.addAction(okAction);
+            present(alert, animated: true, completion: nil)
         }
     }
+
     
     func toonFilter(_ size: CGSize) -> GPUImageFilterGroup {
         
@@ -401,11 +469,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             self.playingMovie?.removeAllTargets();
             self.playingMovie = nil;
         }
+        if self.writtingMovie != nil {
+            self.writtingMovie!.finishRecording();
+        }
         if self.filter != nil {
             self.filter!.removeAllTargets();
             self.filter = nil;
-        }
-        if self.writtingMovie != nil {
         }
     }
     func addGPUImageView() {
@@ -519,7 +588,11 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             execToonFilter();
         }
     }
-    
+    // 撮影がキャンセルされた時に呼ばれる
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true, completion: nil);
+        resumePreview();
+    }
     
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         // ズームのために要指定
@@ -563,8 +636,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.viewWillTransition(to: size, with: coordinator);
         
         coordinator.animate(alongsideTransition: { context in
-            self.stopPreview();
-            self.resumePreview();
+            if self.playingMovie != nil && self.playingMovieURL != nil {
+                self.execToonFilterMovie(self.playingMovieURL!);
+            }
+            else {
+                self.stopPreview();
+                self.resumePreview();
+            }
         }, completion: nil);
     }
 }
