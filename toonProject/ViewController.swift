@@ -640,8 +640,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                 self.execToonFilterMovie(self.playingMovieURL!);
             }
             else {
-                self.stopPreview();
-                self.resumePreview();
+                if self.sourceImage != nil {
+                    self.execToonFilter();
+                }
+                else {
+                    self.stopPreview();
+                    self.resumePreview();
+                    self.imageScrollView.contentOffset = CGPoint(x:0, y:0);
+                    self.imageScrollView.contentSize = CGSize(width:0, height:0);
+                }
             }
         }, completion: nil);
     }
