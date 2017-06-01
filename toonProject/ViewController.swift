@@ -381,8 +381,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             self.movieSaveButton.isEnabled = false;
 
         }, completion: { finished in
-            self.stopPreview();
-            self.resumePreview();
+            if (self.sourceImage == nil) {
+                self.stopPreview();
+                self.resumePreview();
+            }
             self.imageSelectSeg.isEnabled = false;
             self.saveButton.isEnabled = false;
         })
@@ -484,18 +486,38 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             self.gpuImageVideoCamera!.outputImageOrientation = .portrait;
             viewSize.width = imageView.frame.size.width;
             viewSize.height = imageView.frame.size.height;
+            if(outputSize.width > outputSize.height) {
+                let tmpOutputSize = outputSize;
+                outputSize.width = tmpOutputSize.height;
+                outputSize.height = tmpOutputSize.width;
+            }
         case .portraitUpsideDown:
             self.gpuImageVideoCamera!.outputImageOrientation = .portraitUpsideDown;
             viewSize.width = imageView.frame.size.width;
             viewSize.height = imageView.frame.size.height;
+            if(outputSize.width > outputSize.height) {
+                let tmpOutputSize = outputSize;
+                outputSize.width = tmpOutputSize.height;
+                outputSize.height = tmpOutputSize.width;
+            }
         case .landscapeLeft:
             self.gpuImageVideoCamera!.outputImageOrientation = .landscapeLeft;
             viewSize.width = imageView.frame.size.width;
             viewSize.height = imageView.frame.size.height;
+            if(outputSize.height > outputSize.width) {
+                let tmpOutputSize = outputSize;
+                outputSize.width = tmpOutputSize.height;
+                outputSize.height = tmpOutputSize.width;
+            }
         case .landscapeRight:
             self.gpuImageVideoCamera!.outputImageOrientation = .landscapeRight;
             viewSize.width = imageView.frame.size.width;
             viewSize.height = imageView.frame.size.height;
+            if(outputSize.height > outputSize.width) {
+                let tmpOutputSize = outputSize;
+                outputSize.width = tmpOutputSize.height;
+                outputSize.height = tmpOutputSize.width;
+            }
         case.unknown:
             self.gpuImageVideoCamera!.outputImageOrientation = .unknown;
             viewSize.width = imageView.frame.size.width;
@@ -505,6 +527,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         self.gpuImageView = GPUImageView(frame: CGRect(x: 0,y: 0,width: viewSize.width,height: viewSize.height));
         self.gpuImageView!.fillMode = kGPUImageFillModePreserveAspectRatio;
         self.imageView.addSubview(self.gpuImageView!);
+        print("imageView:\(self.imageView.frame) gpuImageView:\(self.gpuImageView!.frame) outputSize:\(self.outputSize)");
     }
     func resumePreview() {
 
@@ -575,6 +598,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let mediaType: CFString = info[UIImagePickerControllerMediaType] as! CFString;
         if mediaType == kUTTypeMovie {
             
+            self.sourceImage = nil;
+            
             let url = info[UIImagePickerControllerMediaURL] as! URL;
             execToonFilterMovie(url);
         }
@@ -591,7 +616,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     // 撮影がキャンセルされた時に呼ばれる
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true, completion: nil);
-        resumePreview();
+        if( self.sourceImage == nil ) {
+            resumePreview();
+        }
     }
     
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
